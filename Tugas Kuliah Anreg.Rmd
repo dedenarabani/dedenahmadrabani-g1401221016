@@ -1,0 +1,187 @@
+---
+title: "Tugas Kuliah Anreg Pertemuan 6"
+author: "Deden Ahmad Rabani"
+date: "2024-03-06"
+output:
+  word_document: default
+  html_document: default
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+## [Baca Data]{style="color:blue"}
+
+```{r}
+data.anreg <- read.csv("C:/Users/acer/OneDrive - apps.ipb.ac.id/Semester 4/Anreg/Kuliah 6.csv",sep = ";")
+data.anreg
+```
+
+```{r}
+Y<-data.anreg$Y
+X<-data.anreg$X
+n <- nrow(data.anreg)
+n
+```
+
+## [Summary Model Regresi]{style="color:blue"}
+
+```{r}
+model <- lm(Y~X, data.anreg)
+summary(model)
+```
+
+## [Scatter Plot]{style="color:blue"}
+
+```{r}
+y.bar <- mean(Y)
+plot(X,Y)
+```
+
+Terlihat dari Scatter plot diatas, hubungan antara X dan Y tidak linear,
+melainkan membentuk pola ekponensial
+
+## [Uji Formal Normalitas: Kolmogorov-Smirnov]{style="color:blue"}
+
+**Hipotesis:**
+
+H0: sisaan menyebar Normal
+
+H1: sisaan tidak menyebar Normal
+
+```{r}
+library(nortest)
+sisaan_model <- resid(model)
+(norm_model <- lillie.test(sisaan_model))
+```
+
+Karena p-value \> 0,05 maka Tak Tolak H0. Artinya dalam taraf nyata 5%,
+tidak cukup bukti untuk menyatakan bahwa sisaan tidak menyebar Normal.
+
+## [Uji Homogenitas: Breusch-Pagan]{style="color:blue"}
+
+**Hipotesis:**
+
+H0: Ragam Homogen
+
+H1: Ragam tidak Homogen
+
+```{r}
+library(lmtest)
+(homogen_model <- bptest(model))
+```
+
+Karena p-value \> 0,05 bermakna tak tolak H0. Artinya pada taraf nyata
+5%, tidak cukup bukti untuk menyatakan bahwa ragam sisaan tidak homogen.
+
+## [Autokorelasi]{style="color:blue"}
+
+```{r}
+dwtest(model)
+acf(model$residuals)
+```
+
+Grafik tersebut menunjukkan bahwa autokorelasi pada lag 1 mencapai 0.5,
+sedangkan pada lag 2 mencapai 0.4. Kedua nilai tersebut melampaui batas
+kepercayaan 95%, menunjukkan signifikansi autokorelasi pada lag 1 dan 2.
+Hal ini berarti bahwa asumsi Gauss-Markov tidak terpenuhi, terutama
+dalam hal non-autokorelasi.
+
+## [Percobaan 1: Transformasi Weighted Least Square]{style="color:blue"}
+
+```{r}
+A <- abs(model$residuals)
+B <- model$fitted.values
+fit <- lm(A ~ B, data.anreg)
+C <- 1 / fit$fitted.values^2
+C
+```
+
+## [Scatter Plot]{style="color:blue"}
+
+```{r}
+plot(C)
+```
+
+## [Model]{style="color:blue"}
+
+```{r}
+model2<- lm(Y~X, data=data.anreg, weights = C)
+plot(model2)
+```
+
+## [Summary]{style="color:blue"}
+
+```{r}
+summary(model2)
+```
+
+WLS belum efektif karena belum memenuhi asumsi Gauss-Markov
+
+## [Percobaan 2:Transformasi Akar pada X, Y, atau X dan Y]{style="color:blue"}
+
+```{r}
+library(tidyverse)
+library(ggridges)
+library(GGally)
+library(plotly)
+
+library(dplyr)
+library(lmtest)
+library(stats)
+
+
+data.anreg1 <- data.anreg %>%
+  mutate(y = sqrt(Y)) %>%
+  mutate(x = sqrt(X))
+model3 <- lm(y ~ X, data = data.anreg1)
+plot(x = data.anreg1$X, y = data.anreg1$y)
+
+```
+
+## [Plot]{style="color:blue"}
+
+```{r}
+plot(model3)
+```
+
+## [Summary]{style="color:blue"}
+
+```{r}
+summary(model3)
+```
+
+## [Uji Autokorelasi]{style="color:blue"}
+
+```{r}
+dwtest(model3)
+```
+
+Kesimpulan: Karena p-Value lebih besar dari 0.05, tidak ada cukup bukti
+untuk menolak hipotesis nol, artinya tidak adanya autokorelasi. Dari
+transformasi yang dilakukan, terlihat bahwa menggunakan akar Y sebagai
+transformasi membuat model regresi lebih efisien.
+
+Model regresi setelah transformasi tersebut dinyatakan sebagai:
+
+$Y^* = 8.71245−0.81339X_1 + \epsilon$
+
+$Y^* = \sqrt{Y}$
+
+$X^* = \sqrt{X}$
+
+Dengan melakukan transformasi balik, kita mendapatkan:
+
+$$ Y = {(8.7124535 - 0.8133888X^{\frac{1}{2}})}^2
+$$
+
+Interpretasi dari model menunjukkan bahwa Y berkorelasi negatif dengan
+akar kuadrat dari X, menunjukkan hubungan yang bersifat kuadratik.
+Semakin besar nilai akar kuadrat dari X, semakin kecil nilai rata-rata
+Y, dengan tingkat penurunan yang semakin besar. Puncak kurva menunjukkan
+nilai rata-rata maksimum Y untuk nilai tertentu dari X. Nilai konstanta
+8.71245 mewakili Y ketika X sama dengan 0, sementara koefisien regresi
+-0.81339 menunjukkan hubungan negatif antara Y dan akar kuadrat dari X.
+Koefisien yang dikuadratkan menunjukkan hubungan kuadratik antara Y dan
+X, menandakan bahwa perubahan Y tidak proporsional dengan perubahan X,
+melainkan berubah dengan tingkat peningkatan yang semakin tinggi.
